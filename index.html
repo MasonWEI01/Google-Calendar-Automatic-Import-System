@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Google 日历批量导入助手</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --muted: #94a3b8;
+      --text: #e5e7eb;
+      --accent: #22c55e;
+      --accent-2: #60a5fa;
+      --danger: #ef4444;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+      "Apple Color Emoji", "Segoe UI Emoji"; background: radial-gradient(1200px 800px at 10% -10%, #052e16 0%, transparent 50%),
+      radial-gradient(800px 600px at 110% 10%, #0b3b65 0%, transparent 45%),
+      var(--bg); color: var(--text);
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    h1 { margin: 0 0 12px; font-size: 26px; letter-spacing: 0.3px; }
+    p.desc { margin: 6px 0 18px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 800px) { .row { grid-template-columns: 1fr; } }
+
+    label { font-size: 13px; color: var(--muted); margin-bottom: 6px; display: inline-block; }
+    select, input[type="text"], textarea { width: 100%; background: #0b1220; border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 10px 12px; outline: none; transition: border-color .2s, box-shadow .2s; }
+    textarea { min-height: 180px; line-height: 1.5; resize: vertical; }
+    select:focus, input:focus, textarea:focus { border-color: #2f73ff55; box-shadow: 0 0 0 4px rgba(59,130,246,0.15); }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+    button { border: 1px solid var(--border); background: #0e1a2f; color: var(--text); padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: transform .03s ease, background .2s; }
+    button:hover { background: #10203d; }
+    button:active { transform: translateY(1px); }
+    .primary { background: linear-gradient(135deg, #1db954, #34d399); border-color: #19a94c; color: #062b12; font-weight: 600; }
+    .secondary { background: linear-gradient(135deg, #3b82f6, #22d3ee); border-color: #2563eb; color: #062b2b; font-weight: 600; }
+    .danger { background: linear-gradient(135deg, #fb7185, #facc15); border-color: #ef4444; color: #3a0a10; font-weight: 600; }
+
+    .output { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--border); }
+    .list { display: grid; gap: 10px; }
+    .item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); background: #0b1220; border-radius: 10px; }
+    .item .meta { color: var(--muted); font-size: 12px; }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #cbd5e1; border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; background: #0b1220; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .invisible { display: none; }
+    .hint { font-size: 12px; color: var(--muted); }
+    .success { color: #22c55e; }
+    .error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Google 日历批量导入助手</h1>
+      <p class="desc">把你的时间安排批量转换为：1) 可一键打开的「添加到 Google 日历」链接；2) 一个包含所有事件的 .ics 文件，便于在 Google 日历中导入。</p>
+
+      <div class="grid">
+        <div class="row">
+          <div>
+            <label for="delimiter">分隔符（建议使用 | 管道符，避免逗号冲突）</label>
+            <input id="delimiter" type="text" value="|" />
+          </div>
+          <div>
+            <label for="timezone">时间输入时区（用于提示与链接展示，不影响 ICS UTC 写入）</label>
+            <select id="timezone">
+              <option value="local" selected>使用本机系统时区</option>
+              <option value="Asia/Shanghai">Asia/Shanghai（中国标准时间）</option>
+              <option value="UTC">UTC</option>
+              <option value="America/Los_Angeles">America/Los_Angeles</option>
+              <option value="Europe/London">Europe/London</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="events">事件清单（每行一个事件）：
+            <span class="badge">格式：标题 | 开始(YYYY-MM-DD HH:mm) | 结束(YYYY-MM-DD HH:mm) | 地点(可选) | 备注(可选)</span>
+          </label>
+          <textarea id="events" placeholder="例如：\n产品例会 | 2025-09-18 09:30 | 2025-09-18 10:30 | 总部A302 | 每周需求评审\n客户拜访 | 2025-09-20 14:00 | 2025-09-20 15:30 | 客户公司 | 带上合同"></textarea>
+          <div class="hint" style="margin-top:6px;">
+            - 请确保时间为你的本机系统时区；程序会自动转换为 UTC 写入 ICS，以避免跨时区偏移问题。<br/>
+            - 如果你更喜欢 CSV（逗号分隔），请把上方分隔符改成逗号 , 即可。<br/>
+            - 支持全角分隔符：「｜」「，」「；」等会被自动识别；或在上方分隔符中选择一致的符号。<br/>
+            - 每个事件一行；不要把多个事件写在同一行。支持从 Excel/表格直接粘贴（Tab 制表符分隔）。
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="gen">生成链接与 ICS</button>
+          <button class="secondary" id="openAll" disabled>逐个打开所有 Google 日历链接</button>
+          <button class="danger" id="clear">清空输入</button>
+        </div>
+
+        <div class="output" id="output" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+    const eventsInput = $('#events');
+    const delimiterInput = $('#delimiter');
+    const tzInput = $('#timezone');
+    const genBtn = $('#gen');
+    const openAllBtn = $('#openAll');
+    const clearBtn = $('#clear');
+    const output = $('#output');
+
+    let generated = [];
+
+    function toUTCString(date) {
+      // 输出 YYYYMMDDTHHMMSSZ
+      const iso = date.toISOString(); // 2025-09-18T01:30:00.000Z
+      const core = iso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z'); // 20250918T013000Z
+      return core;
+    }
+
+    function escapeRegExp(str) {
+      return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function getDelimRegex(delim) {
+      const altMap = { '|': '｜', ',': '，', ';': '；', '/': '／', ':': '：' };
+      const alt = altMap[delim] || '';
+      const tokens = [escapeRegExp(delim)];
+      if (alt) tokens.push(escapeRegExp(alt));
+      return new RegExp(`\\s*(?:${tokens.join('|')})\\s*`);
+    }
+
+    function normalizeTimeString(s) {
+      return String(s)
+        .replace(/[年\/\.]/g, '-') // 年、/、. -> -
+        .replace(/月/g, '-')
+        .replace(/日/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function parseLocal(dateStr) {
+      if (!dateStr) return null;
+      let s = normalizeTimeString(dateStr.trim());
+      // 匹配：YYYY-MM-DD HH:mm[:ss]（也支持 / 或 . 作为日期分隔符）
+      const m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      if (m) {
+        const [_, y, mo, d, h, mi, ss] = m;
+        return new Date(
+          Number(y),
+          Number(mo) - 1,
+          Number(d),
+          Number(h),
+          Number(mi),
+          ss ? Number(ss) : 0,
+          0
+        );
+      }
+      // 兜底使用原生解析
+      const d2 = new Date(s.replace(' ', 'T'));
+      if (!isNaN(d2.getTime())) return d2;
+      return null;
+    }
+
+    function lineToEvent(line, delim) {
+      const splitRegex = getDelimRegex(delim);
+      const parts = (line.includes('\t') ? line.split(/\t+/) : line.split(splitRegex)).map(s => s.trim());
+      if (!parts[0]) return null;
+      const [title, startStr, endStr, location = '', description = ''] = parts;
+      const start = parseLocal(startStr);
+      const end = parseLocal(endStr);
+      if (!start || !end) return { error: '时间格式错误（需 YYYY-MM-DD HH:mm，支持 / 或 .，也支持中文“年/月/日”，可选秒）', raw: line };
+      if (end <= start) return { error: '结束时间需晚于开始时间', raw: line };
+      return { title, start, end, location, description };
+    }
+
+    function buildGCalLink(evt, tzPref) {
+      const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+      const startUTC = toUTCString(evt.start);
+      const endUTC = toUTCString(evt.end);
+      const params = new URLSearchParams();
+      params.set('text', evt.title || '');
+      params.set('dates', `${startUTC}/${endUTC}`);
+      if (evt.description) params.set('details', evt.description);
+      if (evt.location) params.set('location', evt.location);
+      // ctz 仅用于展示时区，具体时间已按 UTC 指定
+      if (tzPref && tzPref !== 'local') params.set('ctz', tzPref);
+      return `${base}&${params.toString()}`;
+    }
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function formatHuman(dt){
+      return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    }
+
+    function buildICS(events) {
+      const lines = [];
+      lines.push('BEGIN:VCALENDAR');
+      lines.push('VERSION:2.0');
+      lines.push('PRODID:-//Batch GCal Helper//EN');
+      lines.push('CALSCALE:GREGORIAN');
+
+      const now = toUTCString(new Date());
+
+      events.forEach((e, idx) => {
+        const uid = `${Date.now()}-${idx}@batch-gcal-helper.local`;
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:${uid}`);
+        lines.push(`DTSTAMP:${now}`);
+        lines.push(`DTSTART:${toUTCString(e.start)}`);
+        lines.push(`DTEND:${toUTCString(e.end)}`);
+        if (e.title) lines.push(`SUMMARY:${escapeICS(e.title)}`);
+        if (e.location) lines.push(`LOCATION:${escapeICS(e.location)}`);
+        if (e.description) lines.push(`DESCRIPTION:${escapeICS(e.description)}`);
+        lines.push('END:VEVENT');
+      });
+
+      lines.push('END:VCALENDAR');
+      return lines.join('\r\n');
+    }
+
+    function escapeICS(text) {
+      return String(text)
+        .replace(/\\/g, '\\\\')
+        .replace(/\n/g, '\\n')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;');
+    }
+
+    function download(filename, content, mime='text/plain'){
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderResult(okList, errList) {
+      output.innerHTML = '';
+
+      const badges = document.createElement('div');
+      badges.className = 'flex';
+      const count = document.createElement('span');
+      count.className = 'badge';
+      count.textContent = `有效事件 ${okList.length} 条`;
+      badges.appendChild(count);
+      if (errList.length) {
+        const err = document.createElement('span');
+        err.className = 'badge';
+        err.innerHTML = `无效/出错 ${errList.length} 条`;
+        badges.appendChild(err);
+      }
+      output.appendChild(badges);
+
+      if (okList.length) {
+        const bar = document.createElement('div');
+        bar.className = 'actions';
+        const icsBtn = document.createElement('button');
+        icsBtn.className = 'primary';
+        icsBtn.textContent = '下载 .ics（全部事件）';
+        icsBtn.onclick = () => download('events.ics', buildICS(okList), 'text/calendar;charset=utf-8');
+        bar.appendChild(icsBtn);
+        output.appendChild(bar);
+      }
+
+      const list = document.createElement('div');
+      list.className = 'list';
+      okList.forEach((e, i) => {
+        const item = document.createElement('div');
+        item.className = 'item';
+        const left = document.createElement('div');
+        left.innerHTML = `<div><strong>${escapeHtml(e.title || '(无标题)')}</strong></div>
+          <div class="meta">${formatHuman(e.start)} ~ ${formatHuman(e.end)}${e.location ? ' ｜ ' + escapeHtml(e.location) : ''}</div>`;
+        const right = document.createElement('div');
+        right.className = 'flex';
+        const open = document.createElement('button');
+        open.textContent = '打开链接';
+        open.onclick = () => window.open(e.gcal, '_blank');
+        const copy = document.createElement('button');
+        copy.textContent = '复制链接';
+        copy.onclick = async () => {
+          await navigator.clipboard.writeText(e.gcal);
+          copy.textContent = '已复制';
+          setTimeout(()=> copy.textContent = '复制链接', 1200);
+        };
+        right.appendChild(open);
+        right.appendChild(copy);
+
+        item.appendChild(left);
+        item.appendChild(right);
+        list.appendChild(item);
+      });
+      output.appendChild(list);
+
+      if (errList.length) {
+        const errs = document.createElement('div');
+        errs.style.marginTop = '10px';
+        errs.innerHTML = `<div class="error">以下行解析失败，请检查格式：</div>`;
+        const pre = document.createElement('pre');
+        pre.className = 'muted';
+        pre.textContent = errList.map(e => `- ${e.raw || ''} ${e.error ? ' => ' + e.error : ''}`).join('\n');
+        errs.appendChild(pre);
+        output.appendChild(errs);
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    }
+
+    genBtn.addEventListener('click', () => {
+      const delim = delimiterInput.value || '|';
+      const tzPref = tzInput.value;
+      const lines = (eventsInput.value || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const ok = [], errs = [];
+      lines.forEach(line => {
+        const evt = lineToEvent(line, delim);
+        if (!evt) return; // skip empty
+        if (evt.error) { errs.push(evt); return; }
+        evt.gcal = buildGCalLink(evt, tzPref);
+        ok.push(evt);
+      });
+      generated = ok;
+      openAllBtn.disabled = ok.length === 0;
+      renderResult(ok, errs);
+    });
+
+    openAllBtn.addEventListener('click', () => {
+      if (!generated.length) return;
+      // 受浏览器限制，尽量在一次用户点击中串行打开，可能会被拦截为弹窗，建议逐条点击
+      const maxOpen = Math.min(10, generated.length);
+      for (let i = 0; i < maxOpen; i++) {
+        window.open(generated[i].gcal, '_blank');
+      }
+      if (generated.length > maxOpen) {
+        alert(`已尝试打开前 ${maxOpen} 个链接。为避免被浏览器拦截，剩余 ${generated.length - maxOpen} 个请在列表中手动点击。`);
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      eventsInput.value = '';
+      output.innerHTML = '';
+      generated = [];
+      openAllBtn.disabled = true;
+    });
+  </script>
+</body>
+</html>
