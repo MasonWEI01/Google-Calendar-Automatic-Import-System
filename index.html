@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Google 日历批量导入助手</title>
+  <title>Google 日曆批量導入助手</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -60,20 +60,20 @@
 <body>
   <div class="container">
     <div class="card">
-      <h1>Google 日历批量导入助手</h1>
-      <p class="desc">把你的时间安排批量转换为：1) 可一键打开的「添加到 Google 日历」链接；2) 一个包含所有事件的 .ics 文件，便于在 Google 日历中导入。</p>
+      <h1>Google 日曆批量導入助手</h1>
+      <p class="desc">把你的時間安排批量轉換為：1) 可一鍵打開的「添加到 Google 日曆」鏈接；2) 一個包含所有事件的 .ics 文件，便於在 Google 日曆中導入。</p>
 
       <div class="grid">
         <div class="row">
           <div>
-            <label for="delimiter">分隔符（建议使用 | 管道符，避免逗号冲突）</label>
+            <label for="delimiter">分隔符（建議使用 | 管道符，避免逗號衝突）</label>
             <input id="delimiter" type="text" value="|" />
           </div>
           <div>
-            <label for="timezone">时间输入时区（用于提示与链接展示，不影响 ICS UTC 写入）</label>
+            <label for="timezone">時間輸入時區（用於提示與鏈接展示，不影響 ICS UTC 寫入）</label>
             <select id="timezone">
-              <option value="local" selected>使用本机系统时区</option>
-              <option value="Asia/Shanghai">Asia/Shanghai（中国标准时间）</option>
+              <option value="local" selected>使用本機係統時區</option>
+              <option value="Asia/Shanghai">Asia/Shanghai（中國標準時間）</option>
               <option value="UTC">UTC</option>
               <option value="America/Los_Angeles">America/Los_Angeles</option>
               <option value="Europe/London">Europe/London</option>
@@ -82,21 +82,21 @@
         </div>
 
         <div>
-          <label for="events">事件清单（每行一个事件）：
-            <span class="badge">格式：标题 | 开始(YYYY-MM-DD HH:mm) | 结束(YYYY-MM-DD HH:mm) | 地点(可选) | 备注(可选)</span>
+          <label for="events">事件清單（每行一個事件）：
+            <span class="badge">格式：標題 | 開始(YYYY-MM-DD HH:mm) | 結束(YYYY-MM-DD HH:mm) | 地點(可選) | 備注(可選)</span>
           </label>
-          <textarea id="events" placeholder="例如：\n产品例会 | 2025-09-18 09:30 | 2025-09-18 10:30 | 总部A302 | 每周需求评审\n客户拜访 | 2025-09-20 14:00 | 2025-09-20 15:30 | 客户公司 | 带上合同"></textarea>
+          <textarea id="events" placeholder="例如：\n産品例會 | 2025-09-18 09:30 | 2025-09-18 10:30 | 總部A302 | 每周需求評審\n客戶拜訪 | 2025-09-20 14:00 | 2025-09-20 15:30 | 客戶公司 | 帶上閤同"></textarea>
           <div class="hint" style="margin-top:6px;">
-            - 请确保时间为你的本机系统时区；程序会自动转换为 UTC 写入 ICS，以避免跨时区偏移问题。<br/>
-            - 如果你更喜欢 CSV（逗号分隔），请把上方分隔符改成逗号 , 即可。<br/>
-            - 支持全角分隔符：「｜」「，」「；」等会被自动识别；或在上方分隔符中选择一致的符号。<br/>
-            - 每个事件一行；不要把多个事件写在同一行。支持从 Excel/表格直接粘贴（Tab 制表符分隔）。
+            - 請確保時間為你的本機係統時區；程序會自動轉換為 UTC 寫入 ICS，以避免跨時區偏移問題。<br/>
+            - 如果你更喜歡 CSV（逗號分隔），請把上方分隔符改成逗號 , 即可。<br/>
+            - 支持全角分隔符：「｜」「，」「；」等會被自動識彆；或在上方分隔符中選擇一緻的符號。<br/>
+            - 每個事件一行；不要把多個事件寫在同一行。支持從 Excel/錶格直接粘貼（Tab 製錶符分隔）。
           </div>
         </div>
         <div class="actions">
-          <button class="primary" id="gen">生成链接与 ICS</button>
-          <button class="secondary" id="openAll" disabled>逐个打开所有 Google 日历链接</button>
-          <button class="danger" id="clear">清空输入</button>
+          <button class="primary" id="gen">生成鏈接與 ICS</button>
+          <button class="secondary" id="openAll" disabled>逐個打開所有 Google 日曆鏈接</button>
+          <button class="danger" id="clear">清空輸入</button>
         </div>
 
         <div class="output" id="output" aria-live="polite"></div>
@@ -117,7 +117,7 @@
     let generated = [];
 
     function toUTCString(date) {
-      // 输出 YYYYMMDDTHHMMSSZ
+      // 輸齣 YYYYMMDDTHHMMSSZ
       const iso = date.toISOString(); // 2025-09-18T01:30:00.000Z
       const core = iso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z'); // 20250918T013000Z
       return core;
@@ -147,7 +147,7 @@
     function parseLocal(dateStr) {
       if (!dateStr) return null;
       let s = normalizeTimeString(dateStr.trim());
-      // 匹配：YYYY-MM-DD HH:mm[:ss]（也支持 / 或 . 作为日期分隔符）
+      // 匹配：YYYY-MM-DD HH:mm[:ss]（也支持 / 或 . 作為日期分隔符）
       const m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
       if (m) {
         const [_, y, mo, d, h, mi, ss] = m;
@@ -174,8 +174,8 @@
       const [title, startStr, endStr, location = '', description = ''] = parts;
       const start = parseLocal(startStr);
       const end = parseLocal(endStr);
-      if (!start || !end) return { error: '时间格式错误（需 YYYY-MM-DD HH:mm，支持 / 或 .，也支持中文“年/月/日”，可选秒）', raw: line };
-      if (end <= start) return { error: '结束时间需晚于开始时间', raw: line };
+      if (!start || !end) return { error: '時間格式錯誤（需 YYYY-MM-DD HH:mm，支持 / 或 .，也支持中文“年/月/日”，可選秒）', raw: line };
+      if (end <= start) return { error: '結束時間需晚於開始時間', raw: line };
       return { title, start, end, location, description };
     }
 
@@ -188,7 +188,7 @@
       params.set('dates', `${startUTC}/${endUTC}`);
       if (evt.description) params.set('details', evt.description);
       if (evt.location) params.set('location', evt.location);
-      // ctz 仅用于展示时区，具体时间已按 UTC 指定
+      // ctz 僅用於展示時區，具體時間已按 UTC 指定
       if (tzPref && tzPref !== 'local') params.set('ctz', tzPref);
       return `${base}&${params.toString()}`;
     }
@@ -247,12 +247,12 @@
       badges.className = 'flex';
       const count = document.createElement('span');
       count.className = 'badge';
-      count.textContent = `有效事件 ${okList.length} 条`;
+      count.textContent = `有效事件 ${okList.length} 條`;
       badges.appendChild(count);
       if (errList.length) {
         const err = document.createElement('span');
         err.className = 'badge';
-        err.innerHTML = `无效/出错 ${errList.length} 条`;
+        err.innerHTML = `無效/齣錯 ${errList.length} 條`;
         badges.appendChild(err);
       }
       output.appendChild(badges);
@@ -262,7 +262,7 @@
         bar.className = 'actions';
         const icsBtn = document.createElement('button');
         icsBtn.className = 'primary';
-        icsBtn.textContent = '下载 .ics（全部事件）';
+        icsBtn.textContent = '下載 .ics（全部事件）';
         icsBtn.onclick = () => download('events.ics', buildICS(okList), 'text/calendar;charset=utf-8');
         bar.appendChild(icsBtn);
         output.appendChild(bar);
@@ -274,19 +274,19 @@
         const item = document.createElement('div');
         item.className = 'item';
         const left = document.createElement('div');
-        left.innerHTML = `<div><strong>${escapeHtml(e.title || '(无标题)')}</strong></div>
+        left.innerHTML = `<div><strong>${escapeHtml(e.title || '(無標題)')}</strong></div>
           <div class="meta">${formatHuman(e.start)} ~ ${formatHuman(e.end)}${e.location ? ' ｜ ' + escapeHtml(e.location) : ''}</div>`;
         const right = document.createElement('div');
         right.className = 'flex';
         const open = document.createElement('button');
-        open.textContent = '打开链接';
+        open.textContent = '打開鏈接';
         open.onclick = () => window.open(e.gcal, '_blank');
         const copy = document.createElement('button');
-        copy.textContent = '复制链接';
+        copy.textContent = '復製鏈接';
         copy.onclick = async () => {
           await navigator.clipboard.writeText(e.gcal);
-          copy.textContent = '已复制';
-          setTimeout(()=> copy.textContent = '复制链接', 1200);
+          copy.textContent = '已復製';
+          setTimeout(()=> copy.textContent = '復製鏈接', 1200);
         };
         right.appendChild(open);
         right.appendChild(copy);
@@ -300,7 +300,7 @@
       if (errList.length) {
         const errs = document.createElement('div');
         errs.style.marginTop = '10px';
-        errs.innerHTML = `<div class="error">以下行解析失败，请检查格式：</div>`;
+        errs.innerHTML = `<div class="error">以下行解析失敗，請檢查格式：</div>`;
         const pre = document.createElement('pre');
         pre.className = 'muted';
         pre.textContent = errList.map(e => `- ${e.raw || ''} ${e.error ? ' => ' + e.error : ''}`).join('\n');
@@ -332,13 +332,13 @@
 
     openAllBtn.addEventListener('click', () => {
       if (!generated.length) return;
-      // 受浏览器限制，尽量在一次用户点击中串行打开，可能会被拦截为弹窗，建议逐条点击
+      // 受瀏覽器限製，盡量在一次用戶點擊中串行打開，可能會被攔截為彈窗，建議逐條點擊
       const maxOpen = Math.min(10, generated.length);
       for (let i = 0; i < maxOpen; i++) {
         window.open(generated[i].gcal, '_blank');
       }
       if (generated.length > maxOpen) {
-        alert(`已尝试打开前 ${maxOpen} 个链接。为避免被浏览器拦截，剩余 ${generated.length - maxOpen} 个请在列表中手动点击。`);
+        alert(`已嘗試打開前 ${maxOpen} 個鏈接。為避免被瀏覽器攔截，剩餘 ${generated.length - maxOpen} 個請在列錶中手動點擊。`);
       }
     });
 
